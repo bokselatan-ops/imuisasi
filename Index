@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Imunisasi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .container {
+            max-width: 1000px;
+        }
+        .nav-item {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .nav-item.active-page {
+            font-weight: bold;
+            color: #1e40af;
+            border-bottom: 2px solid #1e40af;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .form-input, .form-select {
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            padding: 0.75rem;
+            width: 100%;
+            transition: border-color 0.3s;
+        }
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        .btn {
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+        }
+        .page.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-4 md:p-8">
+
+        <!-- Navigation -->
+        <header class="bg-white card p-4 mb-8 flex flex-wrap justify-center space-x-4 md:space-x-8">
+            <a class="nav-item text-gray-700 hover:text-blue-600 active-page" data-page="dashboard">Dasbor</a>
+            <a class="nav-item text-gray-700 hover:text-blue-600" data-page="input-data">Input Data</a>
+            <a class="nav-item text-gray-700 hover:text-blue-600" data-page="rekap">Rekap</a>
+        </header>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page">
+            <div class="card p-8 text-center">
+                <h2 class="text-3xl font-bold mb-4 text-gray-800">Selamat Datang di Aplikasi Imunisasi</h2>
+                <p class="text-gray-600 mb-6">
+                    Kelola data imunisasi anak dengan mudah dan efisien.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-blue-100 p-6 rounded-lg text-blue-800">
+                        <p class="text-2xl font-bold" id="total-children">0</p>
+                        <p>Total Anak</p>
+                    </div>
+                    <div class="bg-green-100 p-6 rounded-lg text-green-800">
+                        <p class="text-2xl font-bold" id="total-records">0</p>
+                        <p>Total Catatan Imunisasi</p>
+                    </div>
+                    <div class="bg-purple-100 p-6 rounded-lg text-purple-800">
+                        <p class="text-2xl font-bold" id="last-update">Baru</p>
+                        <p>Pembaruan Terakhir</p>
+                    </div>
+                </div>
+                <div class="mt-8 text-gray-500 text-sm">
+                    ID Pengguna Saat Ini: <span id="userIdDisplay">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Data Page -->
+        <div id="input-data" class="page hidden">
+            <div class="card p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Input Data Anak</h2>
+
+                <!-- Search Section -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Cari Data Anak</h3>
+                    <div class="flex flex-col md:flex-row items-stretch md:items-end space-y-4 md:space-y-0 md:space-x-4">
+                        <div class="flex-grow">
+                            <label for="searchNik" class="block text-sm font-medium text-gray-700">NIK Anak / Nama Bayi</label>
+                            <input type="text" id="searchNik" class="form-input mt-1" placeholder="Masukkan NIK (16 digit) atau Nama Bayi">
+                        </div>
+                        <button id="btnCariData" class="btn btn-primary">Cari</button>
+                    </div>
+                    <div id="searchResults" class="mt-4 text-sm font-medium"></div>
+                </div>
+
+                <!-- Input Form -->
+                <div id="inputForm" class="hidden">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Formulir Imunisasi</h3>
+                    <form id="imunisasiForm">
+                        <input type="hidden" id="formType" value="new">
+                        <input type="hidden" id="docId" value="">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="tglImunisasi" class="block text-sm font-medium text-gray-700">Tanggal Imunisasi</label>
+                                <input type="date" id="tglImunisasi" class="form-input mt-1" required>
+                            </div>
+                            <div>
+                                <label for="nikAnak" class="block text-sm font-medium text-gray-700">NIK Anak</label>
+                                <input type="text" id="nikAnak" class="form-input mt-1" required maxlength="16">
+                            </div>
+                            <div>
+                                <label for="namaBayi" class="block text-sm font-medium text-gray-700">Nama Bayi</label>
+                                <input type="text" id="namaBayi" class="form-input mt-1" required>
+                            </div>
+                            <div>
+                                <label for="nikIbu" class="block text-sm font-medium text-gray-700">NIK Ibu</label>
+                                <input type="text" id="nikIbu" class="form-input mt-1" required maxlength="16">
+                            </div>
+                            <div>
+                                <label for="tglLahir" class="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
+                                <input type="date" id="tglLahir" class="form-input mt-1" required>
+                            </div>
+                            <div>
+                                <label for="umur" class="block text-sm font-medium text-gray-700">Umur</label>
+                                <input type="text" id="umur" class="form-input mt-1 bg-gray-100 cursor-not-allowed" readonly>
+                            </div>
+                            <div>
+                                <label for="panjangBadan" class="block text-sm font-medium text-gray-700">Panjang Badan (cm)</label>
+                                <input type="number" id="panjangBadan" class="form-input mt-1" required>
+                            </div>
+                            <div>
+                                <label for="beratBadan" class="block text-sm font-medium text-gray-700">Berat Badan (kg)</label>
+                                <input type="number" id="beratBadan" class="form-input mt-1" step="0.01" required>
+                            </div>
+                            <div>
+                                <label for="jenisKelamin" class="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
+                                <select id="jenisKelamin" class="form-select mt-1" required>
+                                    <option value="">Pilih...</option>
+                                    <option value="Laki-laki">Laki-laki</option>
+                                    <option value="Perempuan">Perempuan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="namaOrtu" class="block text-sm font-medium text-gray-700">Nama Ortu</label>
+                                <input type="text" id="namaOrtu" class="form-input mt-1" required>
+                            </div>
+                            <div>
+                                <label for="kelurahan" class="block text-sm font-medium text-gray-700">Kelurahan</label>
+                                <select id="kelurahan" class="form-select mt-1" required></select>
+                            </div>
+                            <div>
+                                <label for="rtrw" class="block text-sm font-medium text-gray-700">RT / RW</label>
+                                <input type="text" id="rtrw" class="form-input mt-1" required>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="email" class="block text-sm font-medium text-gray-700">Email (Opsional)</label>
+                                <input type="email" id="email" class="form-input mt-1">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Vaksin</label>
+                                <div id="vaksinCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex justify-end space-x-4">
+                            <button type="button" id="btnBatal" class="btn btn-secondary">Batal</button>
+                            <button type="submit" class="btn btn-primary">Simpan Data</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rekap Page -->
+        <div id="rekap" class="page hidden">
+            <div class="card p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Rekap Data Imunisasi</h2>
+
+                <!-- Filter & Search Section -->
+                <div class="flex flex-col md:flex-row md:items-end md:space-x-4 mb-6 space-y-4 md:space-y-0">
+                    <div class="flex-grow">
+                        <label for="searchRekap" class="block text-sm font-medium text-gray-700">Cari Data (NIK Anak / Nama Bayi)</label>
+                        <input type="text" id="searchRekap" class="form-input mt-1" placeholder="Masukkan NIK atau Nama Bayi">
+                    </div>
+                    <div>
+                        <label for="startDate" class="block text-sm font-medium text-gray-700">Dari Tanggal</label>
+                        <input type="date" id="startDate" class="form-input mt-1">
+                    </div>
+                    <div>
+                        <label for="endDate" class="block text-sm font-medium text-gray-700">Sampai Tanggal</label>
+                        <input type="date" id="endDate" class="form-input mt-1">
+                    </div>
+                    <button id="btnFilterRekap" class="btn btn-primary">Filter</button>
+                    <button id="btnExport" class="btn btn-primary">Export ke Excel</button>
+                </div>
+
+                <!-- Rekap Table -->
+                <div class="table-container card p-4">
+                    <table id="rekapTable">
+                        <thead>
+                            <tr>
+                                <th>NIK Anak</th>
+                                <th>Nama Bayi</th>
+                                <th>Tanggal Imunisasi</th>
+                                <th>Jenis Vaksin</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal for Confirmation/Alerts -->
+    <div id="modal" class="modal">
+        <div class="modal-content text-center">
+            <h3 id="modalTitle" class="text-xl font-bold mb-4"></h3>
+            <p id="modalMessage" class="mb-6 text-gray-700"></p>
+            <div id="modalActions" class="flex justify-center space-x-4">
+                <button id="modalClose" class="btn btn-secondary">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // PENTING: GANTI BARIS DI BAWAH INI DENGAN firebaseConfig PROYEK FIREBASE ANDA SENDIRI
+            // Ini yang menyebabkan kesalahan. Silakan ikuti petunjuk yang saya berikan.
+            const firebaseConfig = {
+                apiKey: "YOUR_API_KEY",
+                authDomain: "YOUR_AUTH_DOMAIN",
+                projectId: "YOUR_PROJECT_ID",
+                storageBucket: "YOUR_STORAGE_BUCKET",
+                messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+                appId: "YOUR_APP_ID"
+            };
+
+            // Inisialisasi Firebase
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+
+            // Variabel global (gunakan ini untuk path database)
+            const appId = firebaseConfig.projectId;
+            let imunisasiData = [];
+            let userId = null;
+            let dbData = [];
+
+            // --- DOM Elements ---
+            const pages = document.querySelectorAll('.page');
+            const navItems = document.querySelectorAll('.nav-item');
+            const searchNikInput = document.getElementById('searchNik');
+            const btnCariData = document.getElementById('btnCariData');
+            const searchResultsDiv = document.getElementById('searchResults');
+            const inputFormDiv = document.getElementById('inputForm');
+            const imunisasiForm = document.getElementById('imunisasiForm');
+            const nikAnakInput = document.getElementById('nikAnak');
+            const tglLahirInput = document.getElementById('tglLahir');
+            const umurInput = document.getElementById('umur');
+            const kelurahanSelect = document.getElementById('kelurahan');
+            const vaksinCheckboxesDiv = document.getElementById('vaksinCheckboxes');
+            const rekapTableBody = document.getElementById('rekapTable').querySelector('tbody');
+            const btnFilterRekap = document.getElementById('btnFilterRekap');
+            const searchRekapInput = document.getElementById('searchRekap');
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            const btnExport = document.getElementById('btnExport');
+            const btnBatal = document.getElementById('btnBatal');
+
+            // --- Modal Elements ---
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            const modalActions = document.getElementById('modalActions');
+            const userIdDisplay = document.getElementById('userIdDisplay');
+
+            // --- Data from Google Sheets (Simulated with Firestore) ---
+            const kelurahanData = ["Kelurahan A", "Kelurahan B", "Kelurahan C"];
+            const vaksinData = ["BCG", "Hepatitis B", "Polio", "DPT-HB-HiB", "Campak"];
+            
+            // --- Utility Functions ---
+            function showPage(pageId) {
+                pages.forEach(page => page.classList.add('hidden'));
+                document.getElementById(pageId).classList.remove('hidden');
+                navItems.forEach(item => item.classList.remove('active-page'));
+                document.querySelector(`[data-page="${pageId}"]`).classList.add('active-page');
+            }
+
+            function showModal(title, message, actions = [{ text: 'Tutup', id: 'modalClose', class: 'btn-secondary' }]) {
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                modalActions.innerHTML = '';
+                actions.forEach(action => {
+                    const btn = document.createElement('button');
+                    btn.id = action.id;
+                    btn.className = `btn ${action.class}`;
+                    btn.textContent = action.text;
+                    btn.onclick = action.onclick || (() => modal.style.display = 'none');
+                    modalActions.appendChild(btn);
+                });
+                modal.style.display = 'flex';
+            }
+
+            function hitungUmur(tglLahir) {
+                const today = new Date();
+                const birthDate = new Date(tglLahir);
+                let ageInMonths = (today.getFullYear() - birthDate.getFullYear()) * 12;
+                ageInMonths -= birthDate.getMonth();
+                ageInMonths += today.getMonth();
+                const years = Math.floor(ageInMonths / 12);
+                const months = ageInMonths % 12;
+                return `${years} tahun, ${months} bulan`;
+            }
+
+            function populateForm(data) {
+                document.getElementById('docId').value = data.docId || '';
+                document.getElementById('tglImunisasi').value = data.tglImunisasi || new Date().toISOString().substring(0, 10);
+                nikAnakInput.value = data.nikAnak || '';
+                document.getElementById('namaBayi').value = data.namaBayi || '';
+                document.getElementById('jenisKelamin').value = data.jenisKelamin || '';
+                document.getElementById('namaOrtu').value = data.namaOrtu || '';
+                tglLahirInput.value = data.tglLahir || '';
+                umurInput.value = data.tglLahir ? hitungUmur(data.tglLahir) : '';
+                document.getElementById('kelurahan').value = data.kelurahan || '';
+                document.getElementById('rtrw').value = data.rtrw || '';
+                document.getElementById('nikIbu').value = data.nikIbu || '';
+                document.getElementById('panjangBadan').value = data.panjangBadan || '';
+                document.getElementById('beratBadan').value = data.beratBadan || '';
+                document.getElementById('email').value = data.email || '';
+
+                document.querySelectorAll('input[name="jenisVaksin"]').forEach(cb => {
+                    cb.checked = data.jenisVaksin && data.jenisVaksin.includes(cb.value);
+                });
+            }
+
+            function clearForm() {
+                imunisasiForm.reset();
+                inputFormDiv.classList.add('hidden');
+                searchResultsDiv.textContent = '';
+                document.getElementById('formType').value = 'new';
+                document.getElementById('docId').value = '';
+                nikAnakInput.readOnly = false;
+                document.querySelectorAll('input[name="jenisVaksin"]').forEach(cb => cb.checked = false);
+            }
+            
+            function updateDashboardStats() {
+                const uniqueChildren = new Set(imunisasiData.map(item => item.nikAnak));
+                document.getElementById('total-children').textContent = uniqueChildren.size;
+                document.getElementById('total-records').textContent = imunisasiData.length;
+                if (imunisasiData.length > 0) {
+                    const lastDate = new Date(imunisasiData[imunisasiData.length - 1].tglImunisasi).toLocaleDateString('id-ID');
+                    document.getElementById('last-update').textContent = lastDate;
+                } else {
+                    document.getElementById('last-update').textContent = 'Baru';
+                }
+            }
+
+            // --- Firebase Data Listeners ---
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    userIdDisplay.textContent = userId;
+                    const imunisasiRef = collection(db, `artifacts/${appId}/public/data/imunisasi`);
+                    const dbDataRef = collection(db, `artifacts/${appId}/public/data/anak`);
+                    
+                    onSnapshot(imunisasiRef, (querySnapshot) => {
+                        imunisasiData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        updateDashboardStats();
+                        renderRekapTable();
+                    });
+
+                    onSnapshot(dbDataRef, (querySnapshot) => {
+                        dbData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    });
+
+                } else {
+                    await signInAnonymously(auth);
+                }
+            });
+
+            // --- Initialization ---
+            showPage('dashboard');
+
+            kelurahanData.forEach(kel => {
+                const opt = document.createElement('option');
+                opt.value = kel;
+                opt.textContent = kel;
+                kelurahanSelect.appendChild(opt);
+            });
+            vaksinData.forEach(vaksin => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-2';
+                div.innerHTML = `
+                    <input type="checkbox" id="vaksin-${vaksin.replace(/\s+/g, '')}" name="jenisVaksin" value="${vaksin}" class="rounded text-blue-600 focus:ring-blue-500">
+                    <label for="vaksin-${vaksin.replace(/\s+/g, '')}" class="text-sm text-gray-700">${vaksin}</label>
+                `;
+                vaksinCheckboxesDiv.appendChild(div);
+            });
+
+            // --- Event Listeners ---
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const pageId = item.dataset.page;
+                    showPage(pageId);
+                    if (pageId === 'rekap') {
+                        renderRekapTable();
+                    }
+                    if (pageId === 'input-data') {
+                        clearForm();
+                    }
+                });
+            });
+
+            btnCariData.addEventListener('click', async () => {
+                const searchTerm = searchNikInput.value.trim();
+                
+                if (!searchTerm) {
+                    showModal('Peringatan', 'Silakan masukkan NIK atau Nama Bayi untuk mencari.');
+                    return;
+                }
+                
+                const foundData = dbData.find(item => 
+                    item.nik === searchTerm || item.nama.toLowerCase() === searchTerm.toLowerCase()
+                );
+
+                if (foundData) {
+                    searchResultsDiv.innerHTML = `<p class="text-green-600">Data ditemukan: <b>${foundData.nama}</b></p>`;
+                    const confirmActions = [{ 
+                        text: 'Masuk ke Formulir', 
+                        id: 'confirmForm', 
+                        class: 'btn-primary', 
+                        onclick: () => {
+                            inputFormDiv.classList.remove('hidden');
+                            populateForm(foundData);
+                            document.getElementById('formType').value = 'existing';
+                            nikAnakInput.readOnly = true;
+                            searchResultsDiv.textContent = '';
+                            modal.style.display = 'none';
+                        }
+                    }];
+                    showModal('Data Ditemukan', `Apakah Anda ingin mengisi formulir untuk ${foundData.nama}?`, confirmActions);
+                } else {
+                    searchResultsDiv.innerHTML = `<p class="text-red-600">Data tidak ditemukan.</p>`;
+                    const continueActions = [{
+                        text: 'Lanjutkan Input Data Baru',
+                        id: 'continueNew',
+                        class: 'btn-primary',
+                        onclick: () => {
+                            inputFormDiv.classList.remove('hidden');
+                            imunisasiForm.reset();
+                            nikAnakInput.value = searchTerm;
+                            nikAnakInput.readOnly = true;
+                            document.getElementById('formType').value = 'new';
+                            searchResultsDiv.textContent = '';
+                            modal.style.display = 'none';
+                        }
+                    }];
+                    showModal('Data Tidak Ditemukan', 'Data yang Anda cari tidak ada. Apakah Anda ingin melanjutkan dengan input data baru?', continueActions);
+                }
+            });
+
+            imunisasiForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+                data.jenisVaksin = Array.from(document.querySelectorAll('input[name="jenisVaksin"]:checked')).map(cb => cb.value);
+
+                const formType = document.getElementById('formType').value;
+                const docId = document.getElementById('docId').value;
+                const imunisasiRef = collection(db, `artifacts/${appId}/public/data/imunisasi`);
+                const anakRef = collection(db, `artifacts/${appId}/public/data/anak`);
+
+                try {
+                    if (formType === 'new') {
+                        if (data.nikAnak.length !== 16) {
+                            showModal('Peringatan', 'NIK Anak harus 16 digit. Silakan periksa kembali.');
+                            return;
+                        }
+                        const newDbData = {
+                            nik: data.nikAnak,
+                            nama: data.namaBayi,
+                            nikIbu: data.nikIbu,
+                            tglLahir: data.tglLahir,
+                            jenisKelamin: data.jenisKelamin,
+                            namaOrtu: data.namaOrtu,
+                            kelurahan: data.kelurahan,
+                            rtrw: data.rtrw,
+                            email: data.email
+                        };
+                        const q = query(anakRef, where("nik", "==", data.nikAnak));
+                        const querySnapshot = await getDocs(q);
+                        if (querySnapshot.empty) {
+                           await addDoc(anakRef, newDbData);
+                        } else {
+                            const docIdToUpdate = querySnapshot.docs[0].id;
+                            await updateDoc(doc(anakRef, docIdToUpdate), newDbData);
+                        }
+                        await addDoc(imunisasiRef, data);
+                    } else {
+                        await updateDoc(doc(imunisasiRef, docId), data);
+                    }
+                    
+                    showModal('Sukses', 'Data berhasil disimpan.');
+                    clearForm();
+                } catch (e) {
+                    console.error("Error adding/updating document: ", e);
+                    showModal('Error', 'Terjadi kesalahan saat menyimpan data. Silakan coba lagi.');
+                }
+            });
+
+            btnBatal.addEventListener('click', clearForm);
+
+            tglLahirInput.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    umurInput.value = hitungUmur(e.target.value);
+                }
+            });
+
+            // --- Rekap Functions ---
+            function renderRekapTable(filteredData = imunisasiData) {
+                rekapTableBody.innerHTML = '';
+                if (filteredData.length === 0) {
+                    rekapTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500">Tidak ada data rekap.</td></tr>';
+                    return;
+                }
+                filteredData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.nikAnak}</td>
+                        <td>${item.namaBayi}</td>
+                        <td>${item.tglImunisasi}</td>
+                        <td>${item.jenisVaksin ? item.jenisVaksin.join(', ') : ''}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary edit-btn" data-doc-id="${item.id}">Edit</button>
+                            <button class="btn btn-sm btn-secondary delete-btn" data-doc-id="${item.id}">Hapus</button>
+                        </td>
+                    `;
+                    rekapTableBody.appendChild(row);
+                });
+            }
+
+            btnFilterRekap.addEventListener('click', () => {
+                const searchTerm = searchRekapInput.value.toLowerCase();
+                const startDate = startDateInput.value;
+                const endDate = endDateInput.value;
+                
+                let filtered = imunisasiData;
+
+                if (searchTerm) {
+                    filtered = filtered.filter(item => 
+                        item.nikAnak.includes(searchTerm) || (item.namaBayi && item.namaBayi.toLowerCase().includes(searchTerm))
+                    );
+                }
+
+                if (startDate && endDate) {
+                    filtered = filtered.filter(item => {
+                        const tglImunisasi = new Date(item.tglImunisasi);
+                        const start = new Date(startDate);
+                        const end = new Date(endDate);
+                        return tglImunisasi >= start && tglImunisasi <= end;
+                    });
+                }
+                
+                renderRekapTable(filtered);
+            });
+
+            rekapTableBody.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('edit-btn')) {
+                    const docId = e.target.dataset.docId;
+                    const dataToEdit = imunisasiData.find(item => item.id === docId);
+                    if (dataToEdit) {
+                        showPage('input-data');
+                        inputFormDiv.classList.remove('hidden');
+                        populateForm(dataToEdit);
+                        document.getElementById('formType').value = 'edit';
+                        nikAnakInput.readOnly = true;
+                    }
+                } else if (e.target.classList.contains('delete-btn')) {
+                    const docId = e.target.dataset.docId;
+                    const dataToDelete = imunisasiData.find(item => item.id === docId);
+                    if (dataToDelete) {
+                         const confirmActions = [{
+                            text: 'Hapus',
+                            id: 'confirmDelete',
+                            class: 'btn-primary',
+                            onclick: async () => {
+                                try {
+                                    const imunisasiRef = collection(db, `artifacts/${appId}/public/data/imunisasi`);
+                                    await deleteDoc(doc(imunisasiRef, docId));
+                                    showModal('Sukses', 'Data berhasil dihapus.');
+                                } catch (error) {
+                                    console.error("Error removing document: ", error);
+                                    showModal('Error', 'Terjadi kesalahan saat menghapus data. Silakan coba lagi.');
+                                } finally {
+                                    modal.style.display = 'none';
+                                }
+                            }
+                        }, {
+                            text: 'Batal',
+                            id: 'cancelDelete',
+                            class: 'btn-secondary',
+                            onclick: () => {
+                                modal.style.display = 'none';
+                            }
+                        }];
+                         showModal('Konfirmasi Hapus', `Apakah Anda yakin ingin menghapus data imunisasi untuk ${dataToDelete.namaBayi}?`, confirmActions);
+                    }
+                }
+            });
+
+            btnExport.addEventListener('click', () => {
+                let csvContent = "data:text/csv;charset=utf-8,";
+                const headers = ["Tanggal Imunisasi", "NIK Anak", "NIK Ibu", "Nama Bayi", "Panjang Badan (cm)", "Berat Badan (kg)", "Jenis Vaksin", "Jenis Kelamin", "Nama Ortu", "Tgl Lahir", "Kelurahan", "RT/RW", "Umur", "Email"];
+                csvContent += headers.join(";") + "\n";
+                
+                imunisasiData.forEach(row => {
+                    const rowData = [
+                        row.tglImunisasi,
+                        `'${row.nikAnak}`,
+                        `'${row.nikIbu}`,
+                        row.namaBayi,
+                        row.panjangBadan,
+                        row.beratBadan,
+                        (row.jenisVaksin || []).join(', '),
+                        row.jenisKelamin,
+                        row.namaOrtu,
+                        row.tglLahir,
+                        hitungUmur(row.tglLahir),
+                        row.kelurahan,
+                        row.rtrw,
+                        row.email || ''
+                    ];
+                    csvContent += rowData.join(";") + "\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "rekap_imunisasi.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            // Set up modal close listener
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            document.getElementById('modalClose').addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            // Validation for NIK input
+            document.getElementById('nikAnak').addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            });
+            document.getElementById('nikIbu').addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            });
+        });
+    </script>
+</body>
+</html>
